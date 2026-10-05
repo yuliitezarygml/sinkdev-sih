@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
+@theme {
+  --color-steam-bg: #171a21;
+  --color-steam-card: #1b2838;
+  --color-steam-surface: #121c27;
+  --color-steam-border: #2a475e;
+  --color-steam-blue: #66c0f4;
+  --color-steam-accent: #1a9fff;
+  --color-steam-green: #5c7e10;
+  --color-steam-green-hover: #6e9413;
+  --color-steam-red: #b7352d;
+  --color-steam-text: #c7d5e0;
+  --color-steam-muted: #8f98a0;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #171a21;
+  color: #c7d5e0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* Custom Steam-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #171a21;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a475e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b5c77;
+}
+
+/* Steam glow */
+.steam-glow-blue {
+  box-shadow: 0 0 15px rgba(26, 159, 255, 0.25);
+}
+
+.steam-glow-green {
+  box-shadow: 0 0 15px rgba(92, 126, 16, 0.35);
 }
