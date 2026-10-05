@@ -13,6 +13,7 @@ export default function TotpPage() {
   const [accounts, setAccounts] = useState<TotpAccountDto[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [addModalMode, setAddModalMode] = useState<'scan' | 'uri' | 'manual' | '2fas'>('scan');
 
   const loadAccounts = async () => {
     try {
@@ -39,39 +40,57 @@ export default function TotpPage() {
 
   return (
     <div className="relative min-h-full pb-16 space-y-4">
-      {/* Search Bar */}
+      {/* Search Bar & Quick Action */}
       {accounts.length > 0 && (
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder={t.search_2fa}
-            className="w-full bg-[#1b2838] border border-[#2a475e] rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-[#8f98a0] focus:border-[#66c0f4] outline-none shadow-sm"
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="absolute left-3.5 top-3 text-[#8f98a0]"
-          >
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-[#8f98a0] hover:text-white text-xs"
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={t.search_2fa}
+              className="w-full bg-[#1b2838] border border-[#2a475e] rounded-xl px-4 py-2.5 pl-10 text-xs text-white placeholder-[#8f98a0] focus:border-[#66c0f4] outline-none shadow-sm"
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-3.5 top-3 text-[#8f98a0]"
             >
-              ✕
-            </button>
-          )}
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-[#8f98a0] hover:text-white text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              triggerHaptic('light');
+              setAddModalMode('2fas');
+              setShowAddModal(true);
+            }}
+            className="px-3.5 py-2.5 bg-[#171a21] hover:bg-[#202530] border border-[#2a475e] rounded-xl text-xs font-semibold text-[#66c0f4] flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+            title="Import 2FAS Backup"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>.2FAS</span>
+          </button>
         </div>
       )}
 
@@ -89,19 +108,38 @@ export default function TotpPage() {
               {t.no_2fa_accounts_desc}
             </p>
           </div>
-          <button
-            onClick={() => {
-              triggerHaptic('light');
-              setShowAddModal(true);
-            }}
-            className="px-5 py-2.5 bg-[#2a475e] hover:bg-[#325573] text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-[#66c0f4]">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
-            <span>{t.scan_qr_or_add}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setAddModalMode('scan');
+                setShowAddModal(true);
+              }}
+              className="px-5 py-2.5 bg-[#2a475e] hover:bg-[#325573] text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-[#66c0f4]">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+              <span>{t.scan_qr_or_add}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setAddModalMode('2fas');
+                setShowAddModal(true);
+              }}
+              className="px-5 py-2.5 bg-[#171a21] hover:bg-[#202530] text-[#66c0f4] border border-[#2a475e] text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>{t.import_2fas_tab}</span>
+            </button>
+          </div>
         </div>
       ) : filteredAccounts.length === 0 ? (
         <div className="text-center py-16 text-[#8f98a0] text-xs">
@@ -120,6 +158,7 @@ export default function TotpPage() {
         <button 
           onClick={() => {
             triggerHaptic('light');
+            setAddModalMode('scan');
             setShowAddModal(true);
           }}
           className="w-13 h-13 bg-[#1a9fff] hover:bg-[#66c0f4] text-white rounded-full flex items-center justify-center shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-[#121c27]"
@@ -132,7 +171,12 @@ export default function TotpPage() {
         </button>
       </div>
 
-      <AddTotpAccountModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSuccess={loadAccounts} />
+      <AddTotpAccountModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        onSuccess={loadAccounts} 
+        initialMode={addModalMode}
+      />
     </div>
   );
 }

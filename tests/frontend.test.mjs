@@ -34,6 +34,20 @@ test('brands: recognizes popular services by issuer and label', () => {
     { input: 'Blizzard Battle.net', expectedId: 'blizzard' },
     { input: 'Microsoft Office 365', expectedId: 'microsoft' },
     { input: 'Reddit', expectedId: 'reddit' },
+    { input: 'Cryptomus', expectedId: 'cryptomus' },
+    { input: 'Sony', expectedId: 'sony' },
+    { input: 'OpenAI: iulicbase@gmail.com', expectedId: 'openai' },
+    { input: 'Instagram: yuliitezary.m_d', expectedId: 'instagram' },
+    { input: 'Bybit', expectedId: 'bybit' },
+    { input: 'Testnet-Bybit', expectedId: 'bybit' },
+    { input: 'Majestic RP | San Francisco', expectedId: 'majestic' },
+    { input: 'Majestic RP | Dallas', expectedId: 'majestic' },
+    { input: 'TikTok', expectedId: 'tiktok' },
+    { input: 'JetBrains Account', expectedId: 'jetbrains' },
+    { input: 'Meta: iulict291@gmail.com', expectedId: 'meta' },
+    { input: 'Vercel', expectedId: 'vercel' },
+    { input: 'Riot Games', expectedId: 'riot' },
+    { input: 'Dropbox', expectedId: 'dropbox' },
     { input: 'UnknownCustomService', expectedId: 'default' },
   ];
 
@@ -46,5 +60,26 @@ test('brands: recognizes popular services by issuer and label', () => {
     );
     assert.ok(meta.color, `Brand ${meta.id} missing color`);
     assert.ok(meta.name, `Brand ${meta.id} missing name`);
+  }
+
+  // Also verify two-argument calls (as invoked by TotpCodeCard)
+  const twoArgCases = [
+    { issuer: 'OpenAI', label: 'user@gmail.com', expectedId: 'openai' },
+    { issuer: 'Sony', label: 'yuliitezary@gmail.com', expectedId: 'sony' },
+    { issuer: 'Meta', label: 'iulict291@gmail.com', expectedId: 'meta' },
+    { issuer: 'Bybit', label: 'trader@gmail.com', expectedId: 'bybit' },
+    { issuer: 'Cryptomus', label: 'pay@gmail.com', expectedId: 'cryptomus' },
+    { issuer: 'Google', label: 'user@gmail.com', expectedId: 'google' },
+    { issuer: '', label: 'user@gmail.com', expectedId: 'google' },
+    { issuer: 'GitHub', label: 'coder', expectedId: 'github' },
+  ];
+
+  for (const { issuer, label, expectedId } of twoArgCases) {
+    const meta = getBrandMeta(issuer, label);
+    assert.equal(
+      meta.id,
+      expectedId,
+      `Failed two-arg match for issuer="${issuer}", label="${label}". Expected ${expectedId}, got ${meta.id}`
+    );
   }
 });

@@ -34,6 +34,11 @@ export const translations = {
     search_2fa: 'Search 2FA accounts...',
     no_2fa_match: 'No 2FA accounts match',
     one_time_password: 'One-Time Password',
+    import_2fas_tab: 'Import 2FAS / File',
+    import_2fas_desc: 'Select or drop a .2fas backup file from 2FAS Authenticator',
+    import_2fas_btn: 'Import 2FAS Backup',
+    imported_2fas_count: 'accounts imported from 2FAS',
+    select_2fas_file: 'Click to select .2fas backup file',
 
     // Settings Page
     settings_title: 'Settings & Security',
@@ -153,6 +158,11 @@ export const translations = {
     search_2fa: 'Поиск 2FA аккаунтов...',
     no_2fa_match: 'Не найдено 2FA аккаунтов по запросу',
     one_time_password: 'Одноразовый пароль',
+    import_2fas_tab: 'Импорт 2FAS / файла',
+    import_2fas_desc: 'Выберите или перетащите файл бэкапа .2fas из 2FAS Authenticator',
+    import_2fas_btn: 'Импортировать бэкап 2FAS',
+    imported_2fas_count: 'аккаунтов импортировано из 2FAS',
+    select_2fas_file: 'Нажмите для выбора файла бэкапа .2fas',
 
     // Settings Page
     settings_title: 'Настройки и безопасность',

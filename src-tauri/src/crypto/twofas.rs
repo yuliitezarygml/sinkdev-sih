@@ -174,4 +174,28 @@ mod tests {
         assert_eq!(accounts[1].issuer, "Discord");
         assert_eq!(accounts[1].label, "discuser");
     }
+
+    #[test]
+    fn test_parse_2fas_lowercase_secret_and_link() {
+        let json = r#"{
+            "schemaVersion": 4,
+            "services": [
+                {
+                    "name": "Google",
+                    "secret": "omde22njrnc4q5jo5sssary6mluxtbdt",
+                    "otp": {
+                        "link": "otpauth://totp/Google%3Aiulict291%40gmail.com?secret=omde22njrnc4q5jo5sssary6mluxtbdt&issuer=Google",
+                        "label": "iulict291@gmail.com",
+                        "issuer": "Google"
+                    }
+                }
+            ]
+        }"#;
+
+        let accounts = parse_2fas_backup(json).expect("should parse");
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].issuer, "Google");
+        assert_eq!(accounts[0].label, "iulict291@gmail.com");
+        assert_eq!(accounts[0].secret, "OMDE22NJRNC4Q5JO5SSSARY6MLUXTBDT");
+    }
 }

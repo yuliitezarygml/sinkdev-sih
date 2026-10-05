@@ -569,6 +569,40 @@ export async function importEncryptedVault(
       let steam = decoded.steam_accounts || [];
       let totp = decoded.totp_accounts || [];
 
+      // Detect 2FAS format
+      if (Array.isArray(decoded.services)) {
+        for (const s of decoded.services) {
+          const otp = s.otp || {};
+          let secret = (s.secret || '').trim();
+          if (!secret && otp.link) {
+            try {
+              const u = new URL(otp.link);
+              secret = u.searchParams.get('secret') || '';
+            } catch {}
+          }
+          secret = secret.replace(/\s+/g, '').toUpperCase();
+          if (!secret) continue;
+          const issuer = (otp.issuer || s.name || '2FA').trim();
+          const label = (otp.label || otp.account || s.name || 'Account').trim();
+          const period = otp.period || 30;
+          const digits = otp.digits || 6;
+          const algorithm = (otp.algorithm || 'SHA1').toUpperCase();
+
+          totp.push({
+            id: 'totp_' + Math.random().toString(36).substring(2, 9),
+            issuer,
+            label,
+            current_code: '123456',
+            seconds_left: period,
+            period,
+            digits,
+            algorithm,
+            icon: null,
+            added_at: s.updatedAt || Date.now(),
+          });
+        }
+      }
+
       if (merge) {
         const curSteam = getStoredSteam();
         const curTotp = getStoredTotp();
@@ -670,4 +704,53 @@ export async function importGoogleMigration(
   }
   return invoke<import('./types').TotpAccountDto[]>('import_google_migration', { uri });
 }
+
+export async function import2FasBackup(
+  content: string
+): Promise<import('./types').TotpAccountDto[]> {
+  if (!isTauri()) {
+    const data = JSON.parse(content);
+    const added: import('./types').TotpAccountDto[] = [];
+    const curTotp = getStoredTotp();
+
+    for (const s of data.services || []) {
+      const otp = s.otp || {};
+      let secret = (s.secret || '').trim();
+      if (!secret && otp.link) {
+        try {
+          const u = new URL(otp.link);
+          secret = u.searchParams.get('secret') || '';
+        } catch {}
+      }
+      secret = secret.replace(/\s+/g, '').toUpperCase();
+      if (!secret) continue;
+      const issuer = (otp.issuer || s.name || '2FA').trim();
+      const label = (otp.label || otp.account || s.name || 'Account').trim();
+      const period = otp.period || 30;
+      const digits = otp.digits || 6;
+      const algorithm = (otp.algorithm || 'SHA1').toUpperCase();
+
+      const dto: import('./types').TotpAccountDto = {
+        id: 'totp_' + Math.random().toString(36).substring(2, 9),
+        issuer,
+        label,
+        current_code: '654 321',
+        seconds_left: period,
+        period,
+        digits,
+        algorithm,
+        icon: null,
+        added_at: s.updatedAt ? Math.floor(s.updatedAt / 1000) : Math.floor(Date.now() / 1000),
+      };
+      if (!curTotp.some(existing => existing.issuer === dto.issuer && existing.label === dto.label)) {
+        added.push(dto);
+        curTotp.push(dto);
+      }
+    }
+    saveStoredTotp(curTotp);
+    return added;
+  }
+  return invoke<import('./types').TotpAccountDto[]>('import_2fas_backup', { content });
+}
+
 

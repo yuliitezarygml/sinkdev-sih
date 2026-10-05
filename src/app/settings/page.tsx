@@ -934,11 +934,11 @@ export default function SettingsPage() {
               type="file"
               id="restore-file-input"
               className="hidden"
-              accept=".sinkvault,.json"
+              accept=".sinkvault,.json,.2fas"
               onChange={e => e.target.files?.[0] && handleRestoreFile(e.target.files[0])}
             />
             <p className="text-xs font-semibold text-white">
-              {restoreData ? `✓ File loaded (${restoreData.length} bytes)` : 'Click to select .sinkvault file'}
+              {restoreData ? `✓ File loaded (${restoreData.length} bytes)` : 'Click to select .sinkvault, .json or .2fas file'}
             </p>
           </div>
 

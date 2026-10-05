@@ -248,16 +248,40 @@ async function runE2E() {
     await new Promise((r) => setTimeout(r, 400));
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '08_add_totp_modal.png') });
 
-    // Switch to QR/URI tab inside modal
-    const uriTab = await findButtonByText(page, 'URI / QR-код', 'URI / QR Code');
-    if (uriTab) {
-      await uriTab.click();
-      await new Promise((r) => setTimeout(r, 300));
-      await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09_add_totp_uri_mode.png') });
-      console.log('  ✓ Switched to URI / Migration input mode!');
+    // Test 2FAS File tab inside modal
+    const twoFasTabHandle = await page.evaluateHandle(() => {
+      const modal = document.querySelector('.fixed.inset-0');
+      if (!modal) return null;
+      const btns = Array.from(modal.querySelectorAll('button'));
+      return btns.find(b => b.textContent && b.textContent.includes('.2FAS')) || null;
+    });
+    const twoFasTab = twoFasTabHandle ? twoFasTabHandle.asElement() : null;
+    if (twoFasTab) {
+      await twoFasTab.click();
+      await new Promise((r) => setTimeout(r, 400));
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09_add_totp_2fas_mode.png') });
+      console.log('  ✓ Switched to .2FAS File import mode inside modal!');
+
+      const twoFasPath = '/Users/iulian/Downloads/Telegram Desktop/2fas-backup-20261005191255.2fas';
+      if (fs.existsSync(twoFasPath)) {
+        const fileInput = await page.$('.fixed.inset-0 input[type="file"][accept*=".2fas"]');
+        if (fileInput) {
+          await fileInput.uploadFile(twoFasPath);
+          await new Promise((r) => setTimeout(r, 500));
+          await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09b_2fas_file_selected.png') });
+
+          const importBtn = await findButtonByText(page, 'Импортировать бэкап 2FAS', 'Import 2FAS Backup', 'Import');
+          if (importBtn) {
+            await importBtn.click();
+            await new Promise((r) => setTimeout(r, 1600));
+            await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09c_2fas_imported_success.png') });
+            console.log('  ✓ Successfully imported accounts from real 2fas-backup file!');
+          }
+        }
+      }
     }
 
-    // Close modal
+    // Close modal if still open
     const closeTotpModal = await page.$('.fixed.inset-0 button:has(svg)');
     if (closeTotpModal) await closeTotpModal.click();
     await new Promise((r) => setTimeout(r, 400));

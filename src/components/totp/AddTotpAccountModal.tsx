@@ -1,26 +1,38 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
-import { addTotpAccount, parseOtpauthUri, isTauri } from '@/lib/tauri';
+import { addTotpAccount, parseOtpauthUri, isTauri, import2FasBackup } from '@/lib/tauri';
+import { usePreferences } from '../providers/AppPreferencesProvider';
+import { triggerHaptic } from '@/lib/haptics';
 import jsQR from 'jsqr';
 
 interface AddTotpAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialMode?: 'scan' | 'uri' | 'manual' | '2fas';
 }
 
 export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  initialMode = 'scan',
 }) => {
-  const [mode, setMode] = useState<'scan' | 'uri' | 'manual'>('scan');
+  const { t } = usePreferences();
+  const [mode, setMode] = useState<'scan' | 'uri' | 'manual' | '2fas'>(initialMode);
   const [uri, setUri] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 2FAS File state
+  const [twoFasFileName, setTwoFasFileName] = useState('');
+  const [twoFasContent, setTwoFasContent] = useState('');
+  const [twoFasLoading, setTwoFasLoading] = useState(false);
+  const [twoFasMsg, setTwoFasMsg] = useState('');
+  const twoFasFileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     issuer: '',
@@ -30,6 +42,16 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
     digits: 6,
     period: 30,
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setScanError(null);
+      setTwoFasFileName('');
+      setTwoFasContent('');
+      setTwoFasMsg('');
+    }
+  }, [isOpen, initialMode]);
 
   const handleNativeScan = async () => {
     setScanning(true);
@@ -41,6 +63,7 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
         const res = await scan({ windowed: false, formats: [Format.QRCode] });
         if (res && res.content) {
           await parseOtpauthUri(res.content);
+          triggerHaptic('success');
           onSuccess();
           onClose();
           return;
@@ -77,6 +100,7 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
         if (code && code.data) {
           try {
             await parseOtpauthUri(code.data);
+            triggerHaptic('success');
             onSuccess();
             onClose();
           } catch (err) {
@@ -89,6 +113,40 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
+  };
+
+  const handle2FasFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setTwoFasFileName(file.name);
+    setTwoFasMsg('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setTwoFasContent(reader.result as string);
+      triggerHaptic('light');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImport2Fas = async () => {
+    if (!twoFasContent.trim()) return;
+    setTwoFasLoading(true);
+    setTwoFasMsg('');
+    try {
+      const added = await import2FasBackup(twoFasContent.trim());
+      triggerHaptic('success');
+      setTwoFasMsg(`✓ ${added.length} ${t.imported_2fas_count}!`);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 1200);
+    } catch (err: unknown) {
+      triggerHaptic('error');
+      const msg = err instanceof Error ? err.message : String(err);
+      setTwoFasMsg(`Import error: ${msg}`);
+    } finally {
+      setTwoFasLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,9 +164,11 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
           period: Number(formData.period),
         });
       }
+      triggerHaptic('success');
       onSuccess();
       onClose();
     } catch (err: unknown) {
+      triggerHaptic('error');
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Failed to add 2FA account: ${msg}`);
     }
@@ -120,30 +180,51 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
       <div className="flex gap-1 mb-4 bg-steam-surface p-1 rounded-lg">
         <button
           type="button"
-          className={`flex-1 py-1.5 text-xs rounded font-medium transition-colors ${
+          className={`flex-1 py-1.5 text-[11px] rounded font-medium transition-colors ${
             mode === 'scan' ? 'bg-steam-card text-steam-accent shadow-sm' : 'text-steam-muted hover:text-steam-text'
           }`}
-          onClick={() => setMode('scan')}
+          onClick={() => {
+            setMode('scan');
+            triggerHaptic('light');
+          }}
         >
           Scan QR
         </button>
         <button
           type="button"
-          className={`flex-1 py-1.5 text-xs rounded font-medium transition-colors ${
+          className={`flex-1 py-1.5 text-[11px] rounded font-medium transition-colors ${
             mode === 'uri' ? 'bg-steam-card text-steam-accent shadow-sm' : 'text-steam-muted hover:text-steam-text'
           }`}
-          onClick={() => setMode('uri')}
+          onClick={() => {
+            setMode('uri');
+            triggerHaptic('light');
+          }}
         >
           From URI
         </button>
         <button
           type="button"
-          className={`flex-1 py-1.5 text-xs rounded font-medium transition-colors ${
+          className={`flex-1 py-1.5 text-[11px] rounded font-medium transition-colors ${
             mode === 'manual' ? 'bg-steam-card text-steam-accent shadow-sm' : 'text-steam-muted hover:text-steam-text'
           }`}
-          onClick={() => setMode('manual')}
+          onClick={() => {
+            setMode('manual');
+            triggerHaptic('light');
+          }}
         >
           Manual
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-1.5 text-[11px] rounded font-medium transition-colors ${
+            mode === '2fas' ? 'bg-steam-card text-[#66c0f4] shadow-sm font-semibold' : 'text-steam-muted hover:text-steam-text'
+          }`}
+          onClick={() => {
+            setMode('2fas');
+            triggerHaptic('light');
+          }}
+        >
+          .2FAS File
         </button>
       </div>
 
@@ -182,20 +263,22 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
             </div>
           )}
 
-          <div className="flex flex-col w-full space-y-2 pt-2">
+          <div className="flex flex-col w-full gap-2 pt-2">
             <button
+              type="button"
               onClick={handleNativeScan}
               disabled={scanning}
               className="w-full py-2.5 bg-steam-accent hover:bg-blue-500 text-white font-medium rounded-lg text-xs flex items-center justify-center space-x-2 transition-colors disabled:opacity-50"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
               </svg>
-              <span>{scanning ? 'Opening Camera...' : 'Open Camera Scanner'}</span>
+              <span>{scanning ? 'Scanning...' : 'Scan with Camera'}</span>
             </button>
 
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="w-full py-2 bg-steam-card hover:bg-steam-surface text-steam-text font-medium rounded-lg text-xs flex items-center justify-center space-x-2 transition-colors border border-steam-surface"
             >
@@ -207,6 +290,55 @@ export const AddTotpAccountModal: React.FC<AddTotpAccountModalProps> = ({
               <span>Upload QR Image</span>
             </button>
           </div>
+        </div>
+      ) : mode === '2fas' ? (
+        <div className="space-y-4">
+          <p className="text-xs text-steam-muted">
+            {t.import_2fas_desc}
+          </p>
+
+          <div
+            className="border-2 border-dashed border-[#2a475e] hover:border-[#1a9fff] rounded-xl p-5 text-center bg-[#171a21]/60 cursor-pointer transition-colors"
+            onClick={() => twoFasFileInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={twoFasFileInputRef}
+              className="hidden"
+              accept=".2fas,.json"
+              onChange={handle2FasFileChange}
+            />
+            <div className="w-12 h-12 rounded-full bg-[#1b2838] border border-[#2a475e] flex items-center justify-center text-[#66c0f4] mx-auto mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
+            <p className="text-xs font-semibold text-white">
+              {twoFasFileName ? `✓ ${twoFasFileName}` : t.select_2fas_file}
+            </p>
+            <p className="text-[11px] text-[#8f98a0] mt-1">
+              Supports 2FAS Authenticator export files (.2fas / JSON)
+            </p>
+          </div>
+
+          {twoFasMsg && (
+            <div className={`p-2.5 rounded-xl border text-xs text-center ${
+              twoFasMsg.startsWith('✓') ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-rose-950/40 border-rose-800 text-rose-300'
+            }`}>
+              {twoFasMsg}
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={!twoFasContent || twoFasLoading}
+            onClick={handleImport2Fas}
+            className="w-full bg-[#5c7e10] hover:bg-[#6c9513] disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm"
+          >
+            {twoFasLoading ? 'Importing...' : t.import_2fas_btn}
+          </button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3.5">
