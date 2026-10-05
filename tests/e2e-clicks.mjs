@@ -305,33 +305,77 @@ async function runE2E() {
     await new Promise((r) => setTimeout(r, 300));
 
     // ==========================================
-    // STEP 9: ENCRYPTED VAULT BACKUP EXPORT & RESTORE
+    // STEP 9: VAULT BACKUP (OPTIONAL PASSWORD & ENCRYPTED)
     // ==========================================
-    console.log('[Step 9] Testing Encrypted Backup modal...');
+    console.log('[Step 9] Testing Backup modal with optional password...');
     const backupExportBtn = await findButtonByText(page, 'Export Vault Backup', 'Экспорт бэкапа', 'Export');
     assert.ok(backupExportBtn, 'Export backup button must exist');
     await backupExportBtn.click();
     await page.waitForSelector('.fixed.inset-0', { timeout: 3000 });
     await new Promise((r) => setTimeout(r, 400));
-    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '13_backup_export_modal.png') });
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '13_backup_export_unencrypted.png') });
 
-    // Enter passphrase for backup
-    const passInput = await page.$('.fixed.inset-0 input[type="password"]');
-    if (passInput) {
-      await passInput.type('super_safe_password_2026');
-      const submitExport = await findButtonByText(page, 'sinkvault', 'Скачать', 'Download', 'Export');
-      if (submitExport) {
-        await submitExport.click();
-        await new Promise((r) => setTimeout(r, 500));
-        await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14_backup_exported.png') });
-        console.log('  ✓ Encrypted backup exported successfully!');
+    // Verify unencrypted export button works without password
+    const unencryptedDownloadBtn = await findButtonByText(page, 'Скачать бэкап без пароля', 'Download unencrypted backup', 'Download', 'Скачать');
+    assert.ok(unencryptedDownloadBtn, 'Unencrypted download button should exist without password requirement');
+    await unencryptedDownloadBtn.click();
+    await new Promise((r) => setTimeout(r, 600));
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '13b_unencrypted_backup_exported.png') });
+    console.log('  ✓ Unencrypted fast backup exported without requiring a password!');
+
+    // Wait for export modal auto-close or close button
+    await new Promise((r) => setTimeout(r, 1600));
+
+    // Open export modal again to test password-protected toggle
+    const backupExportBtn2 = await findButtonByText(page, 'Export Vault Backup', 'Экспорт бэкапа', 'Export');
+    if (backupExportBtn2) {
+      await backupExportBtn2.click();
+      await page.waitForSelector('.fixed.inset-0', { timeout: 3000 });
+      await new Promise((r) => setTimeout(r, 400));
+
+      // Click password protection toggle switch
+      const toggleSwitch = await page.$('.fixed.inset-0 button.rounded-full');
+      if (toggleSwitch) {
+        await toggleSwitch.click();
+        await new Promise((r) => setTimeout(r, 300));
+        await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14_backup_export_encrypted_enabled.png') });
+
+        // Enter password now that it is enabled
+        const passInputs = await page.$$('.fixed.inset-0 input[type="password"]');
+        if (passInputs.length >= 2) {
+          await passInputs[0].type('super_safe_password_2026');
+          await passInputs[1].type('super_safe_password_2026');
+          const submitEncrypted = await findButtonByText(page, 'Зашифровать и скачать', 'Encrypt & Download', 'Download');
+          if (submitEncrypted) {
+            await submitEncrypted.click();
+            await new Promise((r) => setTimeout(r, 600));
+            await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14b_encrypted_backup_exported.png') });
+            console.log('  ✓ Encrypted backup exported successfully with password!');
+          }
+        }
       }
+      // Wait for modal to finish
+      await new Promise((r) => setTimeout(r, 1600));
     }
 
-    // Close backup modal
-    const closeBackupModal = await page.$('.fixed.inset-0 button:has(svg)');
-    if (closeBackupModal) await closeBackupModal.click();
-    await new Promise((r) => setTimeout(r, 400));
+    // Test Restore Modal optional password
+    console.log('[Step 9b] Testing Restore Backup modal (optional password field)...');
+    const restoreBtn = await findButtonByText(page, 'Restore Vault Backup', 'Восстановить бэкап', 'Восстановить', 'Restore');
+    if (restoreBtn) {
+      await restoreBtn.click();
+      await page.waitForSelector('.fixed.inset-0', { timeout: 3000 });
+      await new Promise((r) => setTimeout(r, 400));
+      await page.screenshot({ path: path.join(SCREENSHOT_DIR, '14c_backup_restore_modal.png') });
+
+      // Verify password input is not required
+      const isPassRequired = await page.$eval('.fixed.inset-0 input[type="password"]', el => el.hasAttribute('required'));
+      assert.strictEqual(isPassRequired, false, 'Restore password input must NOT be mandatory/required');
+      console.log('  ✓ Restore password input is optional!');
+
+      const closeRestoreBtn = await page.$('.fixed.inset-0 button:has(svg)');
+      if (closeRestoreBtn) await closeRestoreBtn.click();
+      await new Promise((r) => setTimeout(r, 400));
+    }
 
     // ==========================================
     // STEP 10: PIN SETUP, LOCK SCREEN & UNLOCK FLOW

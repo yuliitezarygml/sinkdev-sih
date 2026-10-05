@@ -11,9 +11,17 @@ use crate::storage::vault::AppData;
 #[derive(Serialize, Deserialize)]
 pub struct BackupPayload {
     pub version: u32,
+    #[serde(default = "default_encrypted")]
+    pub encrypted: bool,
+    #[serde(default)]
     pub salt: String,
+    #[serde(default)]
     pub nonce: String,
     pub ciphertext: String,
+}
+
+fn default_encrypted() -> bool {
+    true
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -44,8 +52,18 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> [u8; 32] {
 }
 
 pub fn export_encrypted_vault_data(data: &AppData, passphrase: &str) -> Result<String, String> {
+    let plaintext = serde_json::to_vec(data).map_err(|e| e.to_string())?;
+
+    // If passphrase is empty, export as unencrypted payload
     if passphrase.trim().is_empty() {
-        return Err("Passphrase cannot be empty".to_string());
+        let payload = BackupPayload {
+            version: 1,
+            encrypted: false,
+            salt: String::new(),
+            nonce: String::new(),
+            ciphertext: BASE64.encode(plaintext),
+        };
+        return serde_json::to_string_pretty(&payload).map_err(|e| e.to_string());
     }
 
     let salt_bytes = Uuid::new_v4().as_bytes().to_owned();
@@ -55,12 +73,12 @@ pub fn export_encrypted_vault_data(data: &AppData, passphrase: &str) -> Result<S
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|e| e.to_string())?;
     let nonce = Nonce::from_slice(&nonce_raw);
 
-    let plaintext = serde_json::to_vec(data).map_err(|e| e.to_string())?;
     let ciphertext = cipher.encrypt(nonce, plaintext.as_ref())
         .map_err(|e| format!("Encryption error: {}", e))?;
 
     let payload = BackupPayload {
         version: 1,
+        encrypted: true,
         salt: BASE64.encode(salt_bytes),
         nonce: BASE64.encode(nonce_raw),
         ciphertext: BASE64.encode(ciphertext),
@@ -70,12 +88,39 @@ pub fn export_encrypted_vault_data(data: &AppData, passphrase: &str) -> Result<S
 }
 
 pub fn import_encrypted_vault_data(passphrase: &str, encrypted_json: &str) -> Result<AppData, String> {
-    if passphrase.trim().is_empty() {
-        return Err("Passphrase cannot be empty".to_string());
+    // 1. Try parsing directly as raw AppData JSON
+    if let Ok(raw_data) = serde_json::from_str::<AppData>(encrypted_json) {
+        if !raw_data.steam_accounts.is_empty() || !raw_data.totp_accounts.is_empty() {
+            return Ok(raw_data);
+        }
+    }
+
+    // 2. Try parsing directly as 2FAS backup (.2fas)
+    if let Ok(totp_accounts) = crate::crypto::twofas::parse_2fas_backup(encrypted_json) {
+        if !totp_accounts.is_empty() {
+            return Ok(AppData {
+                steam_accounts: vec![],
+                totp_accounts,
+                ..Default::default()
+            });
+        }
     }
 
     let payload: BackupPayload = serde_json::from_str(encrypted_json)
-        .map_err(|_| "Invalid backup file format. Expected JSON backup object.".to_string())?;
+        .map_err(|_| "Invalid backup file format. Expected JSON backup object or .2fas backup.".to_string())?;
+
+    // 2. Unencrypted backup check
+    if !payload.encrypted || (payload.salt.is_empty() && payload.nonce.is_empty()) {
+        let plaintext = BASE64.decode(&payload.ciphertext)
+            .map_err(|_| "Failed to decode unencrypted backup ciphertext".to_string())?;
+        return serde_json::from_slice::<AppData>(&plaintext)
+            .map_err(|e| format!("Failed to parse accounts: {}", e));
+    }
+
+    // 3. Encrypted backup requires passphrase
+    if passphrase.trim().is_empty() {
+        return Err("This backup is protected with a password. Please enter the password.".to_string());
+    }
 
     let salt_bytes = BASE64.decode(&payload.salt)
         .map_err(|_| "Failed to decode backup salt".to_string())?;
@@ -135,6 +180,22 @@ mod tests {
     }
 
     #[test]
+    fn test_backup_unencrypted_roundtrip() {
+        let original = sample_data();
+
+        // Export without password
+        let unencrypted = export_encrypted_vault_data(&original, "").expect("Unencrypted export should succeed");
+        assert!(unencrypted.contains("\"encrypted\": false"));
+
+        // Import without password
+        let restored = import_encrypted_vault_data("", &unencrypted).expect("Unencrypted import should succeed");
+        assert_eq!(restored.steam_accounts.len(), 1);
+        assert_eq!(restored.steam_accounts[0].account_name, "Gaben");
+        assert_eq!(restored.totp_accounts.len(), 1);
+        assert_eq!(restored.totp_accounts[0].issuer, "Discord");
+    }
+
+    #[test]
     fn test_backup_encrypt_decrypt_success() {
         let original = sample_data();
         let pass = "CorrectHorseBatteryStaple!";
@@ -172,5 +233,28 @@ mod tests {
 
         let err = import_encrypted_vault_data("Password123", &corrupted_json).unwrap_err();
         assert!(err.contains("Decryption failed"));
+    }
+
+    #[test]
+    fn test_backup_import_2fas() {
+        let twofas_json = r#"{
+            "schemaVersion": 4,
+            "services": [
+                {
+                    "name": "Google",
+                    "secret": "JBSWY3DPEHPK3PXP",
+                    "otp": {
+                        "issuer": "Google",
+                        "label": "test@gmail.com"
+                    }
+                }
+            ]
+        }"#;
+
+        let restored = import_encrypted_vault_data("", twofas_json).expect("Should parse 2fas");
+        assert_eq!(restored.totp_accounts.len(), 1);
+        assert_eq!(restored.totp_accounts[0].issuer, "Google");
+        assert_eq!(restored.totp_accounts[0].label, "test@gmail.com");
+        assert_eq!(restored.totp_accounts[0].secret, "JBSWY3DPEHPK3PXP");
     }
 }

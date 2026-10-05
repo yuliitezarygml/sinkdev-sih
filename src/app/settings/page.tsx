@@ -32,6 +32,7 @@ export default function SettingsPage() {
   // Backup & Restore states
   const [showExportModal, setShowExportModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [protectWithPassword, setProtectWithPassword] = useState(false);
   const [backupPass, setBackupPass] = useState('');
   const [backupPassConfirm, setBackupPassConfirm] = useState('');
   const [restorePass, setRestorePass] = useState('');
@@ -192,19 +193,21 @@ export default function SettingsPage() {
 
   const handleExport = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (backupPass.length < 6) {
-      setBackupMsg('Passphrase must be at least 6 characters');
-      return;
-    }
-    if (backupPass !== backupPassConfirm) {
-      setBackupMsg('Passphrases do not match');
-      return;
+    if (protectWithPassword) {
+      if (backupPass.length < 4) {
+        setBackupMsg('Passphrase must be at least 4 characters');
+        return;
+      }
+      if (backupPass !== backupPassConfirm) {
+        setBackupMsg('Passphrases do not match');
+        return;
+      }
     }
 
     setBackupLoading(true);
     setBackupMsg('');
     try {
-      const payload = await exportEncryptedVault(backupPass);
+      const payload = await exportEncryptedVault(protectWithPassword ? backupPass : '');
       triggerHaptic('success');
       // Create download blob
       const blob = new Blob([payload], { type: 'application/json' });
@@ -221,6 +224,7 @@ export default function SettingsPage() {
       setBackupMsg('✓ Backup file generated and downloaded successfully!');
       setTimeout(() => {
         setShowExportModal(false);
+        setProtectWithPassword(false);
         setBackupPass('');
         setBackupPassConfirm('');
         setBackupMsg('');
@@ -248,15 +252,11 @@ export default function SettingsPage() {
       setRestoreMsg('Please select or paste backup file');
       return;
     }
-    if (!restorePass) {
-      setRestoreMsg('Please enter backup password');
-      return;
-    }
 
     setBackupLoading(true);
     setRestoreMsg('');
     try {
-      const summary = await importEncryptedVault(restorePass, restoreData.trim(), restoreMerge);
+      const summary = await importEncryptedVault(restorePass.trim(), restoreData.trim(), restoreMerge);
       triggerHaptic('success');
       setRestoreSummary(summary);
       setRestoreMsg(`✓ ${t.restore_success} (${summary.steam_restored} Steam, ${summary.totp_restored} 2FA)`);
@@ -610,6 +610,9 @@ export default function SettingsPage() {
           <button
             onClick={() => {
               triggerHaptic('light');
+              setProtectWithPassword(false);
+              setBackupPass('');
+              setBackupPassConfirm('');
               setBackupMsg('');
               setShowExportModal(true);
             }}
@@ -829,33 +832,61 @@ export default function SettingsPage() {
       {/* Export Backup Modal */}
       <Modal isOpen={showExportModal} onClose={() => setShowExportModal(false)} title={t.export_backup_title}>
         <form onSubmit={handleExport} className="space-y-4">
-          <p className="text-xs text-[#8f98a0]">
-            {t.enter_backup_password}
-          </p>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#c7d5e0]">Passphrase</label>
-            <input
-              type="password"
-              value={backupPass}
-              onChange={e => setBackupPass(e.target.value)}
-              placeholder={t.backup_pass_placeholder}
-              className="w-full bg-[#121c27] border border-[#2a475e] rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-[#66c0f4] outline-none"
-              required
-            />
+          {/* Toggle Password Protection */}
+          <div className="bg-[#121c27] border border-[#2a475e] rounded-xl p-3.5 flex items-center justify-between">
+            <div className="space-y-0.5 pr-2">
+              <label className="text-xs font-semibold text-white cursor-pointer select-none">
+                {t.protect_with_password}
+              </label>
+              <p className="text-[11px] text-[#8f98a0]">
+                {protectWithPassword ? t.enter_backup_password : t.backup_unencrypted_notice}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setProtectWithPassword(!protectWithPassword);
+                triggerHaptic('light');
+              }}
+              className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${
+                protectWithPassword ? 'bg-[#5c7e10]' : 'bg-[#2a475e]'
+              }`}
+            >
+              <span
+                className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                  protectWithPassword ? 'right-1' : 'left-1'
+                }`}
+              />
+            </button>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#c7d5e0]">Confirm Passphrase</label>
-            <input
-              type="password"
-              value={backupPassConfirm}
-              onChange={e => setBackupPassConfirm(e.target.value)}
-              placeholder="Confirm passphrase"
-              className="w-full bg-[#121c27] border border-[#2a475e] rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-[#66c0f4] outline-none"
-              required
-            />
-          </div>
+          {protectWithPassword && (
+            <div className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#c7d5e0]">Passphrase</label>
+                <input
+                  type="password"
+                  value={backupPass}
+                  onChange={e => setBackupPass(e.target.value)}
+                  placeholder={t.backup_pass_placeholder}
+                  className="w-full bg-[#121c27] border border-[#2a475e] rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-[#66c0f4] outline-none"
+                  required={protectWithPassword}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#c7d5e0]">Confirm Passphrase</label>
+                <input
+                  type="password"
+                  value={backupPassConfirm}
+                  onChange={e => setBackupPassConfirm(e.target.value)}
+                  placeholder="Confirm passphrase"
+                  className="w-full bg-[#121c27] border border-[#2a475e] rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-[#66c0f4] outline-none"
+                  required={protectWithPassword}
+                />
+              </div>
+            </div>
+          )}
 
           {backupMsg && (
             <div className={`p-2.5 rounded-xl border text-xs ${
@@ -878,7 +909,11 @@ export default function SettingsPage() {
               disabled={backupLoading}
               className="px-5 py-2 bg-[#5c7e10] hover:bg-[#6c9513] disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-sm"
             >
-              {backupLoading ? 'Encrypting...' : t.download_backup}
+              {backupLoading
+                ? 'Processing...'
+                : protectWithPassword
+                ? t.download_encrypted_backup
+                : t.download_unencrypted_backup}
             </button>
           </div>
         </form>
@@ -919,14 +954,13 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#c7d5e0]">{t.enter_restore_password}</label>
+            <label className="text-xs font-semibold text-[#c7d5e0]">{t.backup_password_optional_hint}</label>
             <input
               type="password"
               value={restorePass}
               onChange={e => setRestorePass(e.target.value)}
-              placeholder="Backup password"
+              placeholder="Backup password (if protected)"
               className="w-full bg-[#121c27] border border-[#2a475e] rounded-xl px-3.5 py-2.5 text-white text-sm focus:border-[#66c0f4] outline-none"
-              required
             />
           </div>
 

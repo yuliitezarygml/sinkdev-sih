@@ -200,3 +200,27 @@ pub async fn remove_totp_account(app: tauri::AppHandle, id: String) -> Result<()
     vault::save_data(&app, &data)?;
     Ok(())
 }
+
+#[tauri::command]
+pub async fn import_2fas_backup(
+    app: tauri::AppHandle,
+    content: String,
+) -> Result<Vec<TotpAccountDto>, String> {
+    let accounts = crate::crypto::twofas::parse_2fas_backup(&content)?;
+    if accounts.is_empty() {
+        return Err("No valid TOTP accounts found in 2FAS backup".to_string());
+    }
+
+    let mut data = vault::load_data(&app)?;
+    let mut added_dtos = Vec::new();
+
+    for acc in accounts {
+        if !data.totp_accounts.iter().any(|existing| existing.secret == acc.secret) {
+            added_dtos.push(to_totp_dto(&acc));
+            data.totp_accounts.push(acc);
+        }
+    }
+
+    vault::save_data(&app, &data)?;
+    Ok(added_dtos)
+}

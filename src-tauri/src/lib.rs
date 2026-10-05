@@ -56,6 +56,7 @@ pub fn run() {
             totp_cmds::get_totp_accounts,
             totp_cmds::rename_totp_account,
             totp_cmds::remove_totp_account,
+            totp_cmds::import_2fas_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

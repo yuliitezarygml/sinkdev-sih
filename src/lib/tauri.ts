@@ -536,11 +536,12 @@ export async function copyToClipboardWithAutoClear(
 
 export async function exportEncryptedVault(passphrase: string): Promise<string> {
   if (!isTauri()) {
-    // In-browser mock export: simple encoded JSON for preview
+    const isEncrypted = passphrase.trim().length > 0;
     const payload = {
       version: 1,
-      salt: 'mock_salt_b64',
-      nonce: 'mock_nonce_b64',
+      encrypted: isEncrypted,
+      salt: isEncrypted ? 'mock_salt_b64' : '',
+      nonce: isEncrypted ? 'mock_nonce_b64' : '',
       ciphertext: btoa(JSON.stringify({
         steam_accounts: getStoredSteam(),
         totp_accounts: getStoredTotp(),
@@ -559,7 +560,12 @@ export async function importEncryptedVault(
   if (!isTauri()) {
     try {
       const parsed = JSON.parse(backupPayload);
-      const decoded = JSON.parse(atob(parsed.ciphertext));
+      const isEncrypted = parsed.encrypted ?? (!!parsed.salt && !!parsed.nonce);
+      if (isEncrypted && !passphrase.trim()) {
+        throw new Error('This backup is protected with a password. Please enter the password.');
+      }
+      const rawJson = parsed.ciphertext ? atob(parsed.ciphertext) : backupPayload;
+      const decoded = JSON.parse(rawJson);
       let steam = decoded.steam_accounts || [];
       let totp = decoded.totp_accounts || [];
 
@@ -578,8 +584,9 @@ export async function importEncryptedVault(
         totp_restored: totp.length,
         total_accounts: steam.length + totp.length,
       };
-    } catch {
-      throw new Error('Invalid backup file or decryption failed');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid backup file or decryption failed';
+      throw new Error(msg);
     }
   }
   return invoke<import('./types').BackupRestoreSummary>('import_encrypted_vault', {
