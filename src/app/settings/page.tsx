@@ -365,7 +365,7 @@ export default function SettingsPage() {
 
       {/* Language & Theme Card */}
       <div className="bg-[#1b2838] border border-[#2a475e] rounded-2xl p-4 shadow-xl space-y-4">
-        <h3 className="text-sm font-bold text-white">Appearance & Language</h3>
+        <h3 className="text-sm font-bold text-white">{t.appearance_language}</h3>
 
         {/* Language Selection */}
         <div className="space-y-1.5">
@@ -669,11 +669,11 @@ export default function SettingsPage() {
       <Modal isOpen={showSetupPinModal} onClose={() => setShowSetupPinModal(false)} title={t.set_master_pin}>
         <form onSubmit={handleSavePin} className="space-y-4">
           <p className="text-xs text-[#8f98a0]">
-            Create a 4-8 digit numeric PIN to protect your authenticator from unauthorized access.
+            {t.create_pin_desc}
           </p>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#c7d5e0]">Enter PIN</label>
+            <label className="text-xs font-semibold text-[#c7d5e0]">{t.enter_pin}</label>
             <input
               type="password"
               inputMode="numeric"
@@ -687,7 +687,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-[#c7d5e0]">Confirm PIN</label>
+            <label className="text-xs font-semibold text-[#c7d5e0]">{t.confirm_pin}</label>
             <input
               type="password"
               inputMode="numeric"

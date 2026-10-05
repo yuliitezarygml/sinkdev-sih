@@ -28,6 +28,7 @@ export const AppHeader: React.FC = () => {
         {/* Privacy Mode Toggle */}
         <button
           onClick={togglePrivacyMode}
+          aria-label="Toggle Privacy Mode"
           className={`p-2 rounded-xl border transition-all ${
             isPrivacyMode
               ? 'bg-[#1a9fff]/20 border-[#1a9fff] text-[#66c0f4] shadow-sm'

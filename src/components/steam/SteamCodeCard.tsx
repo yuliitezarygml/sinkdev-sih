@@ -117,15 +117,15 @@ export const SteamCodeCard: React.FC<SteamCodeCardProps> = ({ account, onUpdated
                   Steam Guard
                 </span>
                 {account.session_status === 'active' ? (
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#5c7e10]/30 border border-[#5c7e10] text-[#a4d007]">
+                  <span title="Steam Session Status" className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#5c7e10]/30 border border-[#5c7e10] text-[#a4d007]">
                     ● {t.session_active}
                   </span>
                 ) : account.session_status === 'expiring' ? (
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-950/40 border border-amber-600 text-amber-300">
+                  <span title="Steam Session Status" className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-950/40 border border-amber-600 text-amber-300">
                     ▲ {t.session_expiring}
                   </span>
                 ) : (
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#121c27] border border-[#2a475e] text-[#8f98a0]">
+                  <span title="Steam Session Status" className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#121c27] border border-[#2a475e] text-[#8f98a0]">
                     ○ {t.session_none}
                   </span>
                 )}

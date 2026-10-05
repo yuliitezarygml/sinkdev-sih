@@ -26,6 +26,7 @@ const defaultSteamAccounts: SteamAccountDto[] = [
     current_code: 'K3F89',
     seconds_left: 24,
     has_session: true,
+    session_status: 'active',
     added_at: Date.now() - 86400000,
   },
 ];
@@ -259,7 +260,7 @@ export async function getSteamConfirmations(accountId: string, timeOffset = 0): 
         creator_id: '1234567890',
         headline: 'Trade Offer with Gaben',
         summary: ['AK-47 | Redline (Field-Tested)', 'AWP | Asiimov (Battle-Scarred)'],
-        icon: 'https://community.cloudflare.steamstatic.com/economy/image/-9a81dlWLwJ2UUGcVs_nsVtzdOEdtWwKGZZLQHTxDZ7I56KU0Zwwo4NUX4oFJZEHLbXH5ApeO4YmlhxYQknCRvCo04DEVlxkKgpot621FABz7PLfYQJS5NO0m5O0m_7zO6-fzj9V65R33-rF84mg3wft-kE-ZWj7LY7AdgQ9aAqE-1K5wL_ogcC0vcvMziNq6z5i4n_e5y4/360fx360f',
+        icon: null,
         conf_type: 2,
         time_str: 'Just now',
       },

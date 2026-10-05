@@ -34,7 +34,7 @@ export interface Confirmation {
   creator_id: string;
   headline: string;
   summary: string[];
-  icon: string;
+  icon: string | null;
   conf_type: number;
   time_str: string;
 }

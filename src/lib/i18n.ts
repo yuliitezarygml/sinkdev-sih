@@ -103,6 +103,14 @@ export const translations = {
     inspect_trade: 'Inspect Trade Details',
     trade_summary: 'Trade Summary',
 
+    appearance_language: 'Appearance & Language',
+    enter_pin: 'Enter PIN',
+    confirm_pin: 'Confirm PIN',
+    current_pin: 'Current PIN',
+    new_pin: 'New PIN',
+    create_pin_desc: 'Create a 4-8 digit numeric PIN to protect your authenticator from unauthorized access.',
+    remove_pin_desc: 'Enter your current PIN to disable app lock protection:',
+
     // Modal
     cancel: 'Cancel',
     save: 'Save',
@@ -208,6 +216,14 @@ export const translations = {
     update_session: 'Обновить сессию',
     inspect_trade: 'Осмотреть обмен',
     trade_summary: 'Детали обмена',
+
+    appearance_language: 'Оформление и язык',
+    enter_pin: 'Введите PIN-код',
+    confirm_pin: 'Повторите PIN-код',
+    current_pin: 'Текущий PIN-код',
+    new_pin: 'Новый PIN-код',
+    create_pin_desc: 'Придумайте 4-8 значный числовой PIN для защиты приложения от посторонних.',
+    remove_pin_desc: 'Введите текущий PIN-код для отключения защиты:',
 
     // Modal
     cancel: 'Отмена',
