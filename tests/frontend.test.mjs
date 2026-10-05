@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { translations } from '../src/lib/i18n.ts';
-import { getBrandMeta } from '../src/lib/brands.ts';
+import { getBrandIconCount, getBrandMeta } from '../src/lib/brands.ts';
+import { BRAND_ICON_CATALOG } from '../src/lib/brand-icon-catalog.generated.ts';
+import { BRAND_ICON_EXTRAS } from '../src/lib/brand-icon-extras.ts';
 
 test('i18n: translations have identical keys in RU and EN', () => {
   const enKeys = Object.keys(translations.en).sort();
@@ -81,5 +85,17 @@ test('brands: recognizes popular services by issuer and label', () => {
       expectedId,
       `Failed two-arg match for issuer="${issuer}", label="${label}". Expected ${expectedId}, got ${meta.id}`
     );
+  }
+});
+
+test('brands: ships the full offline icon catalog', () => {
+  const catalog = [...BRAND_ICON_CATALOG, ...BRAND_ICON_EXTRAS];
+
+  assert.equal(getBrandIconCount(), catalog.length);
+  assert.ok(catalog.length >= 860, `Expected at least 860 icons, got ${catalog.length}`);
+
+  for (const icon of catalog) {
+    const assetPath = join(process.cwd(), 'public', icon.iconPath.replace(/^\//, ''));
+    assert.ok(existsSync(assetPath), `Missing brand icon asset: ${icon.iconPath}`);
   }
 });

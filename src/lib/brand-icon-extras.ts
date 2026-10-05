@@ -18,6 +18,12 @@ export const BRAND_ICON_EXTRAS = [
     aliases: ['Majestic', 'Majestic RP'],
   },
   {
+    id: 'telegram',
+    name: 'Telegram',
+    iconPath: '/brand-icons/official/telegram.svg',
+    aliases: ['Telegram'],
+  },
+  {
     id: 'riot-games',
     name: 'Riot Games',
     iconPath: '/brand-icons/official/riot-games.svg',

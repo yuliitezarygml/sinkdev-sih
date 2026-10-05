@@ -58,6 +58,13 @@ const EMAIL_DOMAIN_TARGETS: Readonly<Record<string, string>> = {
 
 const GENERIC_ISSUERS = new Set(['', '2fa', 'account', 'authenticator', 'totp']);
 
+const COMPATIBLE_RESULT_IDS: Readonly<Record<string, string>> = {
+  'battle-net': 'blizzard',
+  'epic-games': 'epic',
+  'majestic-rp': 'majestic',
+  'riot-games': 'riot',
+};
+
 const FALLBACK_PALETTES = [
   { color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.2)' },
   { color: '#F97316', bgColor: 'rgba(249, 115, 22, 0.2)' },
@@ -187,7 +194,7 @@ export function getBrandMeta(issuerOrLabel?: string, label?: string): BrandMeta 
   if (match) {
     const palette = fallbackPalette(match.id);
     return {
-      id: match.id,
+      id: COMPATIBLE_RESULT_IDS[match.id] ?? match.id,
       name: match.name,
       iconPath: match.iconPath,
       ...palette,
